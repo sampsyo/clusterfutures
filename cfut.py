@@ -5,6 +5,7 @@ from concurrent import futures
 import sys
 import random
 import string
+import os
 
 INFILE_FMT = 'cfut.in.%s.pickle'
 OUTFILE_FMT = 'cfut.out.%s.pickle'
@@ -38,6 +39,13 @@ class CondorExecutor(futures.Executor):
             fut.set_result(result)
         else:
             fut.set_exception(RemoteException(result))
+
+        # Clean up communication files.
+        os.unlink(INFILE_FMT % workerid)
+        os.unlink(OUTFILE_FMT % workerid)
+        # Clean up Condor stream files.
+        os.unlink(condor.OUTFILE_FMT % str(jobid))
+        os.unlink(condor.ERRFILE_FMT % str(jobid))
     
     def submit(self, fun, *args, **kwargs):
         """Submit a job to the pool."""
