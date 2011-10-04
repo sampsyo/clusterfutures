@@ -1,19 +1,13 @@
-"""Python futures for cluster computing."""
-import condor
-from cloud import serialization
+"""Python futures for Condor clusters."""
 from concurrent import futures
-import sys
-import random
-import string
 import os
+import sys
 import threading
+from . import condor
+from .remote import INFILE_FMT, OUTFILE_FMT, random_string
+from cloud import serialization
 
-INFILE_FMT = 'cfut.in.%s.pickle'
-OUTFILE_FMT = 'cfut.out.%s.pickle'
 LOGFILE_FMT = 'cfut.log.%s.txt'
-
-def random_string(length=32, chars=(string.ascii_letters + string.digits)):
-    return ''.join(random.choice(chars) for i in range(length))
 
 class RemoteException(object):
     pass
@@ -65,7 +59,7 @@ class CondorExecutor(futures.Executor):
         funcser = serialization.serialize((fun, args, kwargs), True)
         with open(INFILE_FMT % workerid, 'w') as f:
             f.write(funcser)
-        jobid = condor.submit(sys.executable, '-m cfut %s' % workerid,
+        jobid = condor.submit(sys.executable, '-m cfut.remote %s' % workerid,
                               log=self.logfile)
 
         if self.debug:
@@ -102,23 +96,3 @@ def map(func, args, ordered=True, debug=False):
             futs.append(etor.submit(func, arg))
         for fut in (futs if ordered else futures.as_completed(futs)):
             yield fut.result()
-
-def _worker(workerid):
-    """Called to execute a job on a Condor host."""
-    try:
-        with open(INFILE_FMT % workerid) as f:
-            indata = f.read()
-        fun, args, kwargs = serialization.deserialize(indata)
-
-        result = True, fun(*args, **kwargs)
-        out = serialization.serialize(result, True)
-
-    except BaseException, exc:
-        result = False, str(exc)
-        out = serialization.serialize(result, False)
-
-    with open(OUTFILE_FMT % workerid, 'w') as f:
-        f.write(out)
-
-if __name__ == '__main__':
-    _worker(*sys.argv[1:])
