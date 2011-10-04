@@ -90,6 +90,19 @@ class CondorExecutor(futures.Executor):
         if os.path.exists(self.logfile):
             os.unlink(self.logfile)
 
+def map(func, args, ordered=True, debug=False):
+    """Convenience function to map a function over cluster jobs. Given
+    a function and an iterable, generates results. (Works like
+    ``itertools.imap``.) If ``ordered`` is False, then the values are
+    generated in an undefined order, possibly more quickly.
+    """
+    with CondorExecutor(debug) as etor:
+        futs = []
+        for arg in args:
+            futs.append(etor.submit(func, arg))
+        for fut in (futs if ordered else futures.as_completed(futs)):
+            yield fut.result()
+
 def _worker(workerid):
     """Called to execute a job on a Condor host."""
     try:

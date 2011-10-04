@@ -18,13 +18,19 @@ def example_1():
 
 def example_2():
     """Get host identifying information about the servers running
-    out jobs.
+    our jobs.
     """
     with cfut.CondorExecutor(False) as executor:
         futures = [executor.submit(hostinfo) for n in range(5)]
         for future in concurrent.futures.as_completed(futures):
             print future.result().strip()
 
+def example_3():
+    """Demonstrates the use of the map() convenience function.
+    """
+    print list(cfut.map(square, [5, 7, 11], debug=True))
+
 if __name__ == '__main__':
     example_1()
     example_2()
+    example_3()
