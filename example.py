@@ -1,14 +1,11 @@
 import cfut
 import concurrent.futures
+import subprocess
 
-# Shared "worker" functions.
+# "Worker" functions.
 def square(n):
     return n * n
-def pid():
-    import os
-    return os.getpid()
 def hostinfo():
-    import subprocess
     return subprocess.check_output('hostname; uname -a', shell=True)
 
 def example_1():
@@ -19,5 +16,15 @@ def example_1():
         for future in concurrent.futures.as_completed(futures):
             print future.result()
 
+def example_2():
+    """Get host identifying information about the servers running
+    out jobs.
+    """
+    with cfut.CondorExecutor(False) as executor:
+        futures = [executor.submit(hostinfo) for n in range(5)]
+        for future in concurrent.futures.as_completed(futures):
+            print future.result().strip()
+
 if __name__ == '__main__':
     example_1()
+    example_2()
