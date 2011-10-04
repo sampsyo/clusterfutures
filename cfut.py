@@ -16,7 +16,9 @@ class RemoteException(object):
     pass
 
 class CondorExecutor(futures.Executor):
-    def __init__(self):
+    def __init__(self, debug=False):
+        self.debug = debug
+
         self.wait_thread = condor.WaitThread(self._completion)
         self.wait_thread.start()
 
@@ -25,6 +27,9 @@ class CondorExecutor(futures.Executor):
     def _completion(self, jobid):
         """Called whenever a job finishes."""
         fut, workerid = self.jobs.pop(jobid)
+        if self.debug:
+            print >>sys.stderr, "job completed: %i" % jobid
+
         with open(OUTFILE_FMT % workerid) as f:
             outdata = f.read()
         success, result = serialization.deserialize(outdata)
@@ -44,6 +49,9 @@ class CondorExecutor(futures.Executor):
         with open(INFILE_FMT % workerid, 'w') as f:
             f.write(funcser)
         jobid = condor.submit(sys.executable, '-m cfut %s' % workerid)
+
+        if self.debug:
+            print >>sys.stderr, "job submitted: %i" % jobid
 
         # Thread will wait for it to finish.
         self.wait_thread.wait(jobid)

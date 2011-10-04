@@ -14,7 +14,7 @@ def hostinfo():
 def example_1():
     """Square some numbers on remote hosts!
     """
-    with cfut.CondorExecutor() as executor:
+    with cfut.CondorExecutor(True) as executor:
         futures = [executor.submit(square, n) for n in range(5)]
         for future in concurrent.futures.as_completed(futures):
             print future.result()
