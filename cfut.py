@@ -6,6 +6,7 @@ import sys
 import random
 import string
 import os
+import threading
 
 INFILE_FMT = 'cfut.in.%s.pickle'
 OUTFILE_FMT = 'cfut.out.%s.pickle'
@@ -18,18 +19,24 @@ class RemoteException(object):
     pass
 
 class CondorExecutor(futures.Executor):
+    """Futures executor for executing jobs on a Condor cluster."""
     def __init__(self, debug=False):
         self.debug = debug
 
         self.logfile = LOGFILE_FMT % random_string()
         self.jobs = {}
+        self.jobs_lock = threading.Lock()
+        self.jobs_empty_cond = threading.Condition(self.jobs_lock)
 
         self.wait_thread = condor.WaitThread(self._completion, self.logfile)
         self.wait_thread.start()
 
     def _completion(self, jobid):
         """Called whenever a job finishes."""
-        fut, workerid = self.jobs.pop(jobid)
+        with self.jobs_lock:
+            fut, workerid = self.jobs.pop(jobid)
+            if not self.jobs:
+                self.jobs_empty_cond.notify_all()
         if self.debug:
             print >>sys.stderr, "job completed: %i" % jobid
 
@@ -67,13 +74,19 @@ class CondorExecutor(futures.Executor):
         # Thread will wait for it to finish.
         self.wait_thread.wait(jobid)
 
-        self.jobs[jobid] = (fut, workerid)
+        with self.jobs_lock:
+            self.jobs[jobid] = (fut, workerid)
         return fut
 
     def shutdown(self, wait=True):
         """Close the pool."""
-        #TODO wait
+        if wait:
+            with self.jobs_lock:
+                if self.jobs:
+                    self.jobs_empty_cond.wait()
+
         self.wait_thread.stop()
+        self.wait_thread.join()
         if os.path.exists(self.logfile):
             os.unlink(self.logfile)
 
