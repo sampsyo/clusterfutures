@@ -3,6 +3,8 @@
 import subprocess
 import re
 import os
+import threading
+import time
 
 LOG_FILE = "condorpy.log"
 OUTFILE_FMT = "condorpy.stdout.%s.log"
@@ -106,6 +108,53 @@ def getoutput(jobid, log=LOG_FILE, cleanup=True):
         os.unlink(errfile)
 
     return stdout, stderr
+
+class WaitThread(threading.Thread):
+    """A worker that polls Condor log files to observe when jobs
+    finish. Each cluster is only waited upon once (after which it is
+    "reaped" from the waiting pool).
+    """
+    def __init__(self, callback, log=LOG_FILE, interval=1):
+        """The callable ``callback`` will be invoked with the cluster
+        ID of every waited-upon job that finishes. ``interval``
+        specifies the polling rate.
+        """
+        threading.Thread.__init__(self)
+        self.callback = callback
+        self.log = log
+        self.interval = interval
+        self.waiting = set()
+        self.lock = threading.Lock()
+        self.shutdown = False
+
+    def stop(self):
+        """Stop the thread soon."""
+        with self.lock:
+            self.shutdown = True
+
+    def wait(self, clustid):
+        """Adds a new job ID to the set of jobs being waited upon."""
+        with self.lock:
+            self.waiting.add(clustid)
+
+    def run(self):
+        while True:
+            with self.lock:
+                if self.shutdown:
+                    return
+
+                # Poll the log file.
+                if os.path.exists(self.log):
+                    with open(self.log) as f:
+                        for line in f:
+                            if 'Job terminated.' in line:
+                                clustid = re.search(r'\((\d+)\.', line).group(1)
+                                clustid = int(clustid)
+                                if clustid in self.waiting:
+                                    self.callback(clustid)
+                                    self.waiting.remove(clustid)
+
+                time.sleep(self.interval)
 
 if __name__ == '__main__':
     jid, jfn = submit_script("#!/bin/sh\necho hey there")
