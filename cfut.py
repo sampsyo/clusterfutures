@@ -9,6 +9,7 @@ import os
 
 INFILE_FMT = 'cfut.in.%s.pickle'
 OUTFILE_FMT = 'cfut.out.%s.pickle'
+LOGFILE_FMT = 'cfut.log.%s.txt'
 
 def random_string(length=32, chars=(string.ascii_letters + string.digits)):
     return ''.join(random.choice(chars) for i in range(length))
@@ -20,10 +21,11 @@ class CondorExecutor(futures.Executor):
     def __init__(self, debug=False):
         self.debug = debug
 
-        self.wait_thread = condor.WaitThread(self._completion)
-        self.wait_thread.start()
-
+        self.logfile = LOGFILE_FMT % random_string()
         self.jobs = {}
+
+        self.wait_thread = condor.WaitThread(self._completion, self.logfile)
+        self.wait_thread.start()
 
     def _completion(self, jobid):
         """Called whenever a job finishes."""
@@ -56,7 +58,8 @@ class CondorExecutor(futures.Executor):
         funcser = serialization.serialize((fun, args, kwargs), True)
         with open(INFILE_FMT % workerid, 'w') as f:
             f.write(funcser)
-        jobid = condor.submit(sys.executable, '-m cfut %s' % workerid)
+        jobid = condor.submit(sys.executable, '-m cfut %s' % workerid,
+                              log=self.logfile)
 
         if self.debug:
             print >>sys.stderr, "job submitted: %i" % jobid
@@ -71,6 +74,8 @@ class CondorExecutor(futures.Executor):
         """Close the pool."""
         #TODO wait
         self.wait_thread.stop()
+        if os.path.exists(self.logfile):
+            os.unlink(self.logfile)
 
 def _worker(workerid):
     """Called to execute a job on a Condor host."""
