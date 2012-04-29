@@ -6,7 +6,7 @@ import subprocess
 def square(n):
     return n * n
 def hostinfo():
-    return subprocess.check_output('hostname; uname -a', shell=True)
+    return subprocess.check_output('uname -a', shell=True)
 
 def example_1():
     """Square some numbers on remote hosts!
@@ -22,6 +22,7 @@ def example_2():
     """
     with cfut.SlurmExecutor(False) as executor:
         futures = [executor.submit(hostinfo) for n in range(15)]
+        print 'Some cluster nodes:'
         for future in concurrent.futures.as_completed(futures):
             print future.result().strip()
 

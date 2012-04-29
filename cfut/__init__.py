@@ -127,7 +127,7 @@ class FileWaitThread(threading.Thread):
                         self.callback(self.waiting[filename])
                         del self.waiting[filename]
 
-                time.sleep(self.interval)
+            time.sleep(self.interval)
 
 class SlurmExecutor(futures.Executor):
     """Futures executor for executing jobs on a Slurm cluster."""
