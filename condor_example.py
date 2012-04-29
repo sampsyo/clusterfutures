@@ -28,7 +28,8 @@ def example_2():
 def example_3():
     """Demonstrates the use of the map() convenience function.
     """
-    print list(cfut.map(square, [5, 7, 11], debug=True))
+    exc = cfut.CondorExecutor(False)
+    print list(cfut.map(exc, square, [5, 7, 11]))
 
 if __name__ == '__main__':
     example_1()

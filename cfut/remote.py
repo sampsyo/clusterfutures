@@ -1,14 +1,10 @@
 """Tools for executing remote commands."""
 from cloud import serialization
 import sys
-import random
-import string
+import os
 
 INFILE_FMT = 'cfut.in.%s.pickle'
 OUTFILE_FMT = 'cfut.out.%s.pickle'
-
-def random_string(length=32, chars=(string.ascii_letters + string.digits)):
-    return ''.join(random.choice(chars) for i in range(length))
 
 def worker(workerid):
     """Called to execute a job on a remote host."""
@@ -24,8 +20,11 @@ def worker(workerid):
         result = False, str(exc)
         out = serialization.serialize(result, False)
 
-    with open(OUTFILE_FMT % workerid, 'w') as f:
+    destfile = OUTFILE_FMT % workerid
+    tempfile = destfile + '.tmp'
+    with open(tempfile, 'w') as f:
         f.write(out)
+    os.rename(tempfile, destfile)
 
 if __name__ == '__main__':
     worker(*sys.argv[1:])
