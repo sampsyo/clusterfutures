@@ -12,8 +12,12 @@ from cloud import serialization
 
 LOGFILE_FMT = 'cfut.log.%s.txt'
 
-class RemoteException(object):
-    pass
+class RemoteException(Exception):
+    def __init__(self, error):
+        self.error = error
+
+    def __str__(self):
+        return '\n' + self.error.strip()
 
 class FileWaitThread(threading.Thread):
     """A thread that polls the filesystem waiting for a list of files to
@@ -146,7 +150,11 @@ class SlurmExecutor(ClusterExecutor):
         )
 
     def _cleanup(self, jobid):
-        os.unlink(slurm.OUTFILE_FMT.format(str(jobid)))
+        outf = slurm.OUTFILE_FMT.format(str(jobid))
+        try:
+            os.unlink(outf)
+        except OSError:
+            pass
 
 class CondorExecutor(ClusterExecutor):
     """Futures executor for executing jobs on a Condor cluster."""

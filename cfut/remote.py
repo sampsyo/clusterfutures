@@ -2,9 +2,15 @@
 from cloud import serialization
 import sys
 import os
+import traceback
 
 INFILE_FMT = 'cfut.in.%s.pickle'
 OUTFILE_FMT = 'cfut.out.%s.pickle'
+
+def format_remote_exc():
+    typ, value, tb = sys.exc_info()
+    tb = tb.tb_next  # Remove root call to worker().
+    return ''.join(traceback.format_exception(typ, value, tb))
 
 def worker(workerid):
     """Called to execute a job on a remote host."""
@@ -16,8 +22,8 @@ def worker(workerid):
         result = True, fun(*args, **kwargs)
         out = serialization.serialize(result, True)
 
-    except BaseException, exc:
-        result = False, str(exc)
+    except:
+        result = False, format_remote_exc()
         out = serialization.serialize(result, False)
 
     destfile = OUTFILE_FMT % workerid
