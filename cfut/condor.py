@@ -159,9 +159,9 @@ class WaitThread(threading.Thread):
 if __name__ == '__main__':
     jid, jfn = submit_script("#!/bin/sh\necho hey there")
     try:
-        print "running job %i" % jid
+        print("running job %i" % jid)
         stdout, stderr = getoutput(jid)
-        print "job done"
-        print stdout
+        print("job done")
+        print(stdout)
     finally:
         os.unlink(jfn)

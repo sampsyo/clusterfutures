@@ -14,7 +14,7 @@ def example_1():
     with cfut.CondorExecutor(True) as executor:
         futures = [executor.submit(square, n) for n in range(5)]
         for future in concurrent.futures.as_completed(futures):
-            print future.result()
+            print(future.result())
 
 def example_2():
     """Get host identifying information about the servers running
@@ -23,13 +23,13 @@ def example_2():
     with cfut.CondorExecutor(False) as executor:
         futures = [executor.submit(hostinfo) for n in range(5)]
         for future in concurrent.futures.as_completed(futures):
-            print future.result().strip()
+            print(future.result().strip())
 
 def example_3():
     """Demonstrates the use of the map() convenience function.
     """
     exc = cfut.CondorExecutor(False)
-    print list(cfut.map(exc, square, [5, 7, 11]))
+    print(list(cfut.map(exc, square, [5, 7, 11])))
 
 if __name__ == '__main__':
     example_1()

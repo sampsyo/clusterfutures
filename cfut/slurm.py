@@ -16,8 +16,7 @@ def submit_text(job):
     filename = '_temp_{}.sh'.format(random_string())
     with open(filename, 'w') as f:
         f.write(job)
-    out, _ = chcall('sbatch {}'.format(filename))
-    jobid = re.search(r'job (\d+)', out).group(1)
+    jobid, _ = chcall('sbatch --parsable {}'.format(filename))
     os.unlink(filename)
     return int(jobid)
 

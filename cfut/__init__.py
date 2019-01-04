@@ -8,7 +8,7 @@ from . import condor
 from . import slurm
 from .remote import INFILE_FMT, OUTFILE_FMT
 from .util import random_string
-from cloud import serialization
+import cloudpickle
 
 LOGFILE_FMT = 'cfut.log.%s.txt'
 
@@ -94,11 +94,11 @@ class ClusterExecutor(futures.Executor):
             if not self.jobs:
                 self.jobs_empty_cond.notify_all()
         if self.debug:
-            print >>sys.stderr, "job completed: %i" % jobid
+            print("job completed: %i" % jobid, file=sys.stderr)
 
-        with open(OUTFILE_FMT % workerid) as f:
+        with open(OUTFILE_FMT % workerid, 'rb') as f:
             outdata = f.read()
-        success, result = serialization.deserialize(outdata)
+        success, result = cloudpickle.loads(outdata)
 
         if success:
             fut.set_result(result)
@@ -117,13 +117,13 @@ class ClusterExecutor(futures.Executor):
 
         # Start the job.
         workerid = random_string()
-        funcser = serialization.serialize((fun, args, kwargs), True)
-        with open(INFILE_FMT % workerid, 'w') as f:
+        funcser = cloudpickle.dumps((fun, args, kwargs), True)
+        with open(INFILE_FMT % workerid, 'wb') as f:
             f.write(funcser)
         jobid = self._start(workerid)
 
         if self.debug:
-            print >>sys.stderr, "job submitted: %i" % jobid
+            print("job submitted: %i" % jobid, file=sys.stderr)
 
         # Thread will wait for it to finish.
         self.wait_thread.wait(OUTFILE_FMT % workerid, jobid)
