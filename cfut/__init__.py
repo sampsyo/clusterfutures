@@ -64,13 +64,14 @@ class FileWaitThread(threading.Thread):
 class ClusterExecutor(futures.Executor):
     """An abstract base class for executors that run jobs on clusters.
     """
-    def __init__(self, debug=False):
+    def __init__(self, debug=False, keep_logs=False):
         self.debug = debug
 
         self.jobs = {}
         self.job_outfiles = {}
         self.jobs_lock = threading.Lock()
         self.jobs_empty_cond = threading.Condition(self.jobs_lock)
+        self.keep_logs = keep_logs
 
         self.wait_thread = FileWaitThread(self._completion)
         self.wait_thread.start()
@@ -111,7 +112,7 @@ class ClusterExecutor(futures.Executor):
 
         self._cleanup(jobid)
 
-    def submit(self, fun, *args, **kwargs):
+    def submit(self, fun, *args, additional_setup_lines=[], **kwargs):
         """Submit a job to the pool."""
         fut = futures.Future()
 
@@ -120,7 +121,7 @@ class ClusterExecutor(futures.Executor):
         funcser = cloudpickle.dumps((fun, args, kwargs), True)
         with open(INFILE_FMT % workerid, 'wb') as f:
             f.write(funcser)
-        jobid = self._start(workerid)
+        jobid = self._start(workerid, additional_setup_lines)
 
         if self.debug:
             print("job submitted: %i" % jobid, file=sys.stderr)
@@ -144,12 +145,15 @@ class ClusterExecutor(futures.Executor):
 
 class SlurmExecutor(ClusterExecutor):
     """Futures executor for executing jobs on a Slurm cluster."""
-    def _start(self, workerid):
+    def _start(self, workerid, additional_setup_lines):
         return slurm.submit(
-            '{} -m cfut.remote {}'.format(sys.executable, workerid)
+            '{} -m cfut.remote {}'.format(sys.executable, workerid, additional_setup_lines=additional_setup_lines)
         )
 
     def _cleanup(self, jobid):
+        if self.keep_logs:
+            return
+
         outf = slurm.OUTFILE_FMT.format(str(jobid))
         try:
             os.unlink(outf)
@@ -162,7 +166,7 @@ class CondorExecutor(ClusterExecutor):
         super(CondorExecutor, self).__init__(debug)
         self.logfile = LOGFILE_FMT % random_string()
 
-    def _start(self, workerid):
+    def _start(self, workerid, additional_setup_lines):
         return condor.submit(sys.executable, '-m cfut.remote %s' % workerid,
                              log=self.logfile)
 

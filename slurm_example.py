@@ -11,8 +11,9 @@ def hostinfo():
 def example_1():
     """Square some numbers on remote hosts!
     """
-    with cfut.SlurmExecutor(True) as executor:
-        futures = [executor.submit(square, n) for n in range(5)]
+    with cfut.SlurmExecutor(True, keep_logs=True) as executor:
+        job_count = 5
+        futures = [executor.submit(square, n) for n in range(job_count)]
         for future in concurrent.futures.as_completed(futures):
             print(future.result())
 
