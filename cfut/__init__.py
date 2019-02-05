@@ -65,6 +65,7 @@ class ClusterExecutor(futures.Executor):
     """An abstract base class for executors that run jobs on clusters.
     """
     def __init__(self, debug=False, keep_logs=False):
+        os.makedirs(local_filename(), exist_ok=True)
         self.debug = debug
 
         self.jobs = {}
