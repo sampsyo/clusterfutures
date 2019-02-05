@@ -5,10 +5,11 @@ import re
 import os
 import threading
 import time
+from .util import local_filename
 
-LOG_FILE = "condorpy.log"
-OUTFILE_FMT = "condorpy.stdout.%s.log"
-ERRFILE_FMT = "condorpy.stderr.%s.log"
+LOG_FILE = local_filename("condorpy.log")
+OUTFILE_FMT = local_filename("condorpy.stdout.%s.log")
+ERRFILE_FMT = local_filename("condorpy.stderr.%s.log")
 
 def call(command, stdin=None):
     """Invokes a shell command as a subprocess, optionally with some
@@ -79,7 +80,7 @@ def submit_script(script, **kwargs):
     with the name of the temporary script file executed. (This should
     probably be removed once the job completes.)
     """
-    filename = 'condorpy.jobscript.%s'
+    filename = local_filename('condorpy.jobscript.%s')
     with open(filename, 'w') as f:
         f.write(script)
     os.chmod(filename, 0o755)

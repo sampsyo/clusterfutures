@@ -4,16 +4,16 @@ import re
 import os
 import threading
 import time
-from .util import chcall, random_string
+from .util import chcall, random_string, local_filename
 
-LOG_FILE = "slurmpy.log"
-OUTFILE_FMT = "slurmpy.stdout.{}.log"
+LOG_FILE = local_filename("slurmpy.log")
+OUTFILE_FMT = local_filename("slurmpy.stdout.{}.log")
 
 def submit_text(job):
     """Submits a Slurm job represented as a job file string. Returns
     the job ID.
     """
-    filename = '_temp_{}.sh'.format(random_string())
+    filename = local_filename('_temp_{}.sh'.format(random_string()))
     with open(filename, 'w') as f:
         f.write(job)
     jobid, _ = chcall('sbatch --parsable {}'.format(filename))
