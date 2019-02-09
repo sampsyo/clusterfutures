@@ -1,11 +1,12 @@
 """Tools for executing remote commands."""
-from cloud import serialization
+import cloudpickle
 import sys
 import os
 import traceback
+from .util import local_filename
 
-INFILE_FMT = 'cfut.in.%s.pickle'
-OUTFILE_FMT = 'cfut.out.%s.pickle'
+INFILE_FMT = local_filename('cfut.in.%s.pickle')
+OUTFILE_FMT = local_filename('cfut.out.%s.pickle')
 
 def format_remote_exc():
     typ, value, tb = sys.exc_info()
@@ -14,21 +15,23 @@ def format_remote_exc():
 
 def worker(workerid):
     """Called to execute a job on a remote host."""
+    print("worker")
     try:
-        with open(INFILE_FMT % workerid) as f:
+        with open(INFILE_FMT % workerid, 'rb') as f:
             indata = f.read()
-        fun, args, kwargs = serialization.deserialize(indata)
-
+        fun, args, kwargs = cloudpickle.loads(indata)
         result = True, fun(*args, **kwargs)
-        out = serialization.serialize(result, True)
+        out = cloudpickle.dumps(result, True)
 
-    except:
+    except Exception as e:
+        print(traceback.format_exc())
+
         result = False, format_remote_exc()
-        out = serialization.serialize(result, False)
+        out = cloudpickle.dumps(result, False)
 
     destfile = OUTFILE_FMT % workerid
     tempfile = destfile + '.tmp'
-    with open(tempfile, 'w') as f:
+    with open(tempfile, 'wb') as f:
         f.write(out)
     os.rename(tempfile, destfile)
 
