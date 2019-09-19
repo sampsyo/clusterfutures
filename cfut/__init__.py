@@ -119,7 +119,7 @@ class ClusterExecutor(futures.Executor):
 
         # Start the job.
         workerid = random_string()
-        funcser = cloudpickle.dumps((fun, args, kwargs), True)
+        funcser = cloudpickle.dumps((fun, args, kwargs))
         with open(INFILE_FMT % workerid, 'wb') as f:
             f.write(funcser)
         jobid = self._start(workerid, additional_setup_lines)

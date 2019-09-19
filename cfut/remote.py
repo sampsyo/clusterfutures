@@ -21,13 +21,13 @@ def worker(workerid):
             indata = f.read()
         fun, args, kwargs = cloudpickle.loads(indata)
         result = True, fun(*args, **kwargs)
-        out = cloudpickle.dumps(result, True)
+        out = cloudpickle.dumps(result)
 
     except Exception as e:
         print(traceback.format_exc())
 
         result = False, format_remote_exc()
-        out = cloudpickle.dumps(result, False)
+        out = cloudpickle.dumps(result)
 
     destfile = OUTFILE_FMT % workerid
     tempfile = destfile + '.tmp'
