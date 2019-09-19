@@ -148,8 +148,7 @@ class SlurmExecutor(ClusterExecutor):
     """Futures executor for executing jobs on a Slurm cluster."""
     def _start(self, workerid, additional_setup_lines):
         return slurm.submit(
-            '{} -m cfut.remote {}'.format(sys.executable, workerid, additional_setup_lines=additional_setup_lines)
-        )
+            '{} -m cfut.remote {}'.format(sys.executable, workerid), additional_setup_lines=additional_setup_lines)
 
     def _cleanup(self, jobid):
         if self.keep_logs:
