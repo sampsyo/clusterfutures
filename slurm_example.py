@@ -5,6 +5,8 @@ import concurrent.futures
 # "Worker" functions.
 def square(n):
     return n * n
+def square_sum(n,m):
+    return n * n + m * m
 def hostinfo():
     return subprocess.check_output('uname -a', shell=True)
 
@@ -29,10 +31,26 @@ def example_2():
 def example_3():
     """Demonstrates the use of the map() convenience function.
     """
-    exc = cfut.SlurmExecutor(False)
+    exc = cfut.SlurmExecutor(True)
     print(list(cfut.map(exc, square, [5, 7, 11])))
 
+def example_4():
+    """Demonstrates the use of the map_array() convenience function.
+    """
+    exc = cfut.SlurmExecutor(True)
+    additional_setup_lines = ["#SBATCH -p wmglab"]
+    print(list(cfut.map_array(exc, square, [5, 7, 11],additional_setup_lines)))
+
+def example_5():
+    """Demonstrates the use of the map_array() convenience function.
+    """
+    exc = cfut.SlurmExecutor(True)
+    additional_setup_lines = ["#SBATCH -p wmglab"]
+    print(list(cfut.map_array(exc, square_sum, [1, 2, 3],[2,3,4],additional_setup_lines)))
+
 if __name__ == '__main__':
-    example_1()
-    example_2()
-    example_3()
+    # example_1()
+    # example_2()
+    # example_3()
+    # example_4()
+    example_5()

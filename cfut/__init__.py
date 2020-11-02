@@ -96,7 +96,7 @@ class ClusterExecutor(futures.Executor):
             if not self.jobs:
                 self.jobs_empty_cond.notify_all()
         if self.debug:
-            print("job completed: %i" % jobid, file=sys.stderr)
+            print("job completed: %s" % str(jobid), file=sys.stderr)
 
         with open(OUTFILE_FMT % workerid, 'rb') as f:
             outdata = f.read()
@@ -125,7 +125,7 @@ class ClusterExecutor(futures.Executor):
         jobid = self._start(workerid, additional_setup_lines)
 
         if self.debug:
-            print("job submitted: %i" % jobid, file=sys.stderr)
+            print("job submitted: %s" % str(jobid), file=sys.stderr)
 
         # Thread will wait for it to finish.
         self.wait_thread.wait(OUTFILE_FMT % workerid, jobid)
@@ -150,6 +150,10 @@ class SlurmExecutor(ClusterExecutor):
         return slurm.submit(
             '{} -m cfut.remote {}'.format(sys.executable, workerid), additional_setup_lines=additional_setup_lines)
 
+    def _start_array(self, workerid_base, additional_setup_lines):
+        return slurm.submit_array(
+            '{} -m cfut.remote {}_$SLURM_ARRAY_TASK_ID'.format(sys.executable, workerid_base), additional_setup_lines=additional_setup_lines)
+
     def _cleanup(self, jobid):
         if self.keep_logs:
             return
@@ -159,6 +163,41 @@ class SlurmExecutor(ClusterExecutor):
             os.unlink(outf)
         except OSError:
             pass
+
+    def submit_array(self, fun, args, additional_setup_lines=[],kwargs=[]):
+        """Submit a job to the pool. args should be single iterable, don't accept kwargs for now"""
+        if len(kwargs) == 0:
+            kwargs = [{} for _ in args] # empty dicts
+        elif len(kwargs) != len(args):
+            raise NotImplementedError('Number of kwarg dicts must equal number of arg lists')
+        # Start the job.
+        workerids = []
+        workerid_base = random_string()
+        for i, (arg,kwarg) in enumerate(zip(args,kwargs)):
+            workerid = workerid_base + '_%d' % i # i will be $SLURM_ARRAY_TASK_ID (starting at 0)
+            funcser = cloudpickle.dumps((fun, [arg], kwarg))
+            with open(INFILE_FMT % workerid, 'wb') as f:
+                f.write(funcser)
+            workerids.append(workerid)
+
+        # submit job array with length equal to number of arguments,
+        # each job in array matches a workerid pickle file (fully parallelized)
+        additional_setup_lines.append("#SBATCH --array=0-{}".format(len(args)-1))
+        jobid = self._start_array(workerid_base, additional_setup_lines)
+        jobids = ['%d_%d' % (jobid,i) for i in range(0,len(args))] # note: using string, rather than int
+        if self.debug:
+            print("job array submitted: %d_0-%d" % (jobid,len(args)-1), file=sys.stdout)
+
+        # Thread will wait for all jobs to finish.
+        futs = []
+        for workerid,jobid in zip(workerids,jobids):
+            fut = futures.Future()
+            self.wait_thread.wait(OUTFILE_FMT % workerid, jobid)
+
+            with self.jobs_lock:
+                self.jobs[jobid] = (fut, workerid)
+            futs.append(fut)
+        return futs
 
 class CondorExecutor(ClusterExecutor):
     """Futures executor for executing jobs on a Condor cluster."""
@@ -189,5 +228,16 @@ def map(executor, func, args, ordered=True):
         futs = []
         for arg in args:
             futs.append(executor.submit(func, arg))
+        for fut in (futs if ordered else futures.as_completed(futs)):
+            yield fut.result()
+
+def map_array(executor, func, args, ordered=True,additional_setup_lines=[]):
+    """Convenience function to map a function over cluster jobs. Given
+    a function and an iterable, generates results. (Works like
+    ``itertools.imap``.) If ``ordered`` is False, then the values are
+    generated in an undefined order, possibly more quickly.
+    """
+    with executor:
+        futs = executor.submit_array(func, args, additional_setup_lines)
         for fut in (futs if ordered else futures.as_completed(futs)):
             yield fut.result()
