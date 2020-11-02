@@ -232,8 +232,8 @@ def map(executor, func, args, ordered=True):
             yield fut.result()
 
 def map_array(executor, func, args, ordered=True,additional_setup_lines=[]):
-    """Convenience function to map a function over cluster jobs. Given
-    a function and an iterable, generates results. (Works like
+    """Convenience function to map a function over cluster job arrays (--array).
+    Given a function and an iterable, generates results. (Works like
     ``itertools.imap``.) If ``ordered`` is False, then the values are
     generated in an undefined order, possibly more quickly.
     """
