@@ -32,14 +32,18 @@ def example_3():
     """Demonstrates the use of the map() convenience function.
     """
     exc = cfut.SlurmExecutor(True)
-    print(list(cfut.map(exc, square, [5, 7, 11])))
+    additional_setup_lines = ["#SBATCH -p wmglab"] # only works if srun -p wmglab also included
+    print(list(cfut.map(exc, square, [5, 7, 11],ordered=True,additional_setup_lines=additional_setup_lines)))
 
 def example_4():
     """Demonstrates the use of the map_array() convenience function.
     """
     exc = cfut.SlurmExecutor(True)
     additional_setup_lines = []
-    print(list(cfut.map_array(exc, square, [5, 7, 11],additional_setup_lines)))
+    batch_size = 1
+    print(list(cfut.map_array(exc, square,  [5, 7, 11],ordered=True,
+                              additional_setup_lines=additional_setup_lines,
+                              batch_size=batch_size)))
 
 def example_5(): # TODO: implement variable *args and **kwargs, currently doesn't work
     """Demonstrates the use of the map_array() convenience function with two arguments.

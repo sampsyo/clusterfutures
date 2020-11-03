@@ -33,6 +33,8 @@ def submit(cmdline, outpat=OUTFILE_FMT.format('%j'), additional_setup_lines=[]):
 
 def submit_array(cmdline, outpat=OUTFILE_FMT.format('%j'), additional_setup_lines=[]):
     """Starts a Slurm job that runs the specified shell command line.
+    Compatible with job array (passed in additional_setup_lines), executes shell command line
+    within slurm job, rather than as job step using srun
     """
     script_lines = [
         "#!/bin/sh",

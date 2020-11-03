@@ -164,29 +164,44 @@ class SlurmExecutor(ClusterExecutor):
         except OSError:
             pass
 
-    def submit_array(self, fun, args, additional_setup_lines=[],kwargs=[]):
-        """Submit a job to the pool. args should be single iterable, don't accept kwargs for now"""
+    def submit_array(self, fun, args, additional_setup_lines=[],kwargs=[],batch_size=1):
+        """Submit a job to the pool. args should be single iterable,
+        kwargs still needs to be tested, input as list of mappings for now"""
         if len(kwargs) == 0:
             kwargs = [{} for _ in args] # empty dicts
         elif len(kwargs) != len(args):
             raise NotImplementedError('Number of kwarg dicts must equal number of arg lists')
-        # Start the job.
+        # Start the job array.
         workerids = []
         workerid_base = random_string()
-        for i, (arg,kwarg) in enumerate(zip(args,kwargs)):
+        if len(args) % batch_size != 0: # TODO: make compatible with number of args non-divisible by batch size (some workers do additional work)
+            raise NotImplementedError('Number of arguments must be divisible by batch size')
+
+        num_jobs = int(len(args)/batch_size)
+        for i in range(0,num_jobs):
             workerid = workerid_base + '_%d' % i # i will be $SLURM_ARRAY_TASK_ID (starting at 0)
-            funcser = cloudpickle.dumps((fun, [arg], kwarg))
+            inds = (batch_size*i,batch_size*(i+1))
+            arg = args[inds[0]:inds[1]] # list of args in each batch
+            kwarg = kwargs[inds[0]:inds[1]] # list of kwargs in each batch
+            funcser = cloudpickle.dumps((fun,arg,kwarg))
             with open(INFILE_FMT % workerid, 'wb') as f:
                 f.write(funcser)
             workerids.append(workerid)
 
+        # for i, (arg,kwarg) in enumerate(zip(args,kwargs)):
+        #     workerid = workerid_base + '_%d' % i # i will be $SLURM_ARRAY_TASK_ID (starting at 0)
+        #     funcser = cloudpickle.dumps((fun, [arg], kwarg))
+        #     with open(INFILE_FMT % workerid, 'wb') as f:
+        #         f.write(funcser)
+        #     workerids.append(workerid)
+
         # submit job array with length equal to number of arguments,
         # each job in array matches a workerid pickle file (fully parallelized)
-        additional_setup_lines.append("#SBATCH --array=0-{}".format(len(args)-1))
+        additional_setup_lines.append("#SBATCH --array=0-{}".format(num_jobs-1))
         jobid = self._start_array(workerid_base, additional_setup_lines)
-        jobids = ['%d_%d' % (jobid,i) for i in range(0,len(args))] # note: using string, rather than int
+        jobids = ['%d_%d' % (jobid,i) for i in range(0,num_jobs)] # note: using string, rather than int
         if self.debug:
-            print("job array submitted: %d_0-%d" % (jobid,len(args)-1), file=sys.stdout)
+            print("job array submitted: %d_0-%d" % (jobid,num_jobs-1), file=sys.stderr)
 
         # Thread will wait for all jobs to finish.
         futs = []
@@ -218,7 +233,7 @@ class CondorExecutor(ClusterExecutor):
         if os.path.exists(self.logfile):
             os.unlink(self.logfile)
 
-def map(executor, func, args, ordered=True):
+def map(executor, func, args, ordered=True,additional_setup_lines=[]):
     """Convenience function to map a function over cluster jobs. Given
     a function and an iterable, generates results. (Works like
     ``itertools.imap``.) If ``ordered`` is False, then the values are
@@ -227,17 +242,27 @@ def map(executor, func, args, ordered=True):
     with executor:
         futs = []
         for arg in args:
-            futs.append(executor.submit(func, arg))
+            futs.append(executor.submit(func, arg, additional_setup_lines=additional_setup_lines))
         for fut in (futs if ordered else futures.as_completed(futs)):
             yield fut.result()
 
-def map_array(executor, func, args, ordered=True,additional_setup_lines=[]):
+def map_array(executor, func, args, ordered=True,additional_setup_lines=[],batch_size=1):
     """Convenience function to map a function over cluster job arrays (--array).
     Given a function and an iterable, generates results. (Works like
     ``itertools.imap``.) If ``ordered`` is False, then the values are
     generated in an undefined order, possibly more quickly.
     """
+    results = [] # if batch_size > 1
     with executor:
-        futs = executor.submit_array(func, args, additional_setup_lines)
+        futs = executor.submit_array(func, args, additional_setup_lines,batch_size=batch_size)
         for fut in (futs if ordered else futures.as_completed(futs)):
-            yield fut.result()
+            if batch_size == 1:
+                yield fut.result()
+            else:
+                # yield zip(*fut.result())
+                results.append(list(fut.result()))
+
+        if batch_size > 1:
+            from itertools import chain
+            # yield from zip(*results)
+            yield from chain(*results)
