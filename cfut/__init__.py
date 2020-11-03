@@ -96,7 +96,7 @@ class ClusterExecutor(futures.Executor):
             if not self.jobs:
                 self.jobs_empty_cond.notify_all()
         if self.debug:
-            print("job completed: %s" % str(jobid), file=sys.stderr)
+            print("job completed: %s" % str(jobid), file=sys.stdout)
 
         with open(OUTFILE_FMT % workerid, 'rb') as f:
             outdata = f.read()
@@ -125,7 +125,7 @@ class ClusterExecutor(futures.Executor):
         jobid = self._start(workerid, additional_setup_lines)
 
         if self.debug:
-            print("job submitted: %s" % str(jobid), file=sys.stderr)
+            print("job submitted: %s" % str(jobid), file=sys.stdout)
 
         # Thread will wait for it to finish.
         self.wait_thread.wait(OUTFILE_FMT % workerid, jobid)
