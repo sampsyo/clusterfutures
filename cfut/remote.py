@@ -20,7 +20,14 @@ def worker(workerid):
         with open(INFILE_FMT % workerid, 'rb') as f:
             indata = f.read()
         fun, args, kwargs = cloudpickle.loads(indata)
-        result = True, fun(*args, **kwargs)
+        if isinstance(args,list) and len(args) > 1:
+            result = True, [fun(*(arg,), **kwarg) for arg,kwarg in zip(args,kwargs)]
+        else:
+            if isinstance(kwargs,list):
+                kwargs = kwargs[0]
+
+            result = True, fun(*args, **kwargs)
+
         out = cloudpickle.dumps(result)
 
     except Exception as e:
