@@ -32,7 +32,7 @@ def example_3():
     """Demonstrates the use of the map() convenience function.
     """
     exc = cfut.SlurmExecutor(True)
-    additional_setup_lines = ["#SBATCH -p wmglab"] # only works if srun -p wmglab also included
+    additional_setup_lines = []
     print(list(cfut.map(exc, square, [5, 7, 11],ordered=True,additional_setup_lines=additional_setup_lines)))
 
 def example_4():
