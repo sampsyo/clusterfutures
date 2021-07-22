@@ -18,8 +18,8 @@ setup(name='clusterfutures',
       packages=['cfut'],
       install_requires=[
           'cloudpickle',
-          'futures',
       ],
+      python_requires='>=3.5',
 
       classifiers=[
           'Intended Audience :: Developers',
