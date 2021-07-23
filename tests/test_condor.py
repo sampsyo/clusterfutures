@@ -8,31 +8,37 @@ def square(n):
 
 
 def test_submit():
-    with cfut.SlurmExecutor(True, keep_logs=True) as executor:
-        with MockCommand.fixed_output('sbatch', stdout='000000') as sbatch:
+    executor = cfut.CondorExecutor(debug=True, keep_logs=True)
+    try:
+        with MockCommand.fixed_output('condor_submit', stdout='Proc 0.0') as csub:
             fut = executor.submit(square, 2)
-        sbatch.assert_called()
+        csub.assert_called()
 
         assert not fut.done()
         run_all_outstanding_work()
         assert fut.result(timeout=3) == 4
+    finally:
+        executor.shutdown(wait=False)
 
-SBATCH_JOB_COUNT = """
+CONDOR_JOB_COUNT = """
 from pathlib import Path
-counter_file = Path(__file__).parent / 'sbatch_job_id'
+counter_file = Path(__file__).parent / 'condor_job_id'
 if counter_file.is_file():
     count = int(counter_file.read_text().strip()) + 1
 else:
     count = 0
 counter_file.write_text(str(count))
-print(count)
+print("Proc {}.0".format(count))
 """
 
 def test_map():
-    with cfut.SlurmExecutor(True, keep_logs=True) as executor:
-        with MockCommand('sbatch', python=SBATCH_JOB_COUNT) as sbatch:
+    executor = cfut.CondorExecutor(debug=True, keep_logs=True)
+    try:
+        with MockCommand('condor_submit', python=CONDOR_JOB_COUNT) as csub:
             result_iter = executor.map(square, range(4), timeout=5)
-        sbatch.assert_called()
+        csub.assert_called()
 
         run_all_outstanding_work()
         assert list(result_iter) == [0, 1, 4, 9]
+    finally:
+        executor.shutdown(wait=False)
