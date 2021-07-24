@@ -50,8 +50,8 @@ def submit_text(job):
     """Submits a Condor job represented as a job file string. Returns
     the cluster ID of the submitted job.
     """
-    out, _ = chcall('condor_submit -v', job)
-    jobid = re.search(r'Proc (\d+)\.0', out).group(1)
+    out, _ = chcall('condor_submit -v', job.encode('utf-8'))
+    jobid = re.search(rb'Proc (\d+)\.0', out).group(1)
     return int(jobid)
 
 def submit(executable, arguments=None, universe="vanilla", log=LOG_FILE,

@@ -162,8 +162,8 @@ class SlurmExecutor(ClusterExecutor):
 
 class CondorExecutor(ClusterExecutor):
     """Futures executor for executing jobs on a Condor cluster."""
-    def __init__(self, debug=False):
-        super(CondorExecutor, self).__init__(debug)
+    def __init__(self, debug=False, keep_logs=False):
+        super(CondorExecutor, self).__init__(debug, keep_logs)
         self.logfile = LOGFILE_FMT % random_string()
 
     def _start(self, workerid, additional_setup_lines):
@@ -171,6 +171,8 @@ class CondorExecutor(ClusterExecutor):
                              log=self.logfile)
 
     def _cleanup(self, jobid):
+        if self.keep_logs:
+            return
         os.unlink(condor.OUTFILE_FMT % str(jobid))
         os.unlink(condor.ERRFILE_FMT % str(jobid))
 

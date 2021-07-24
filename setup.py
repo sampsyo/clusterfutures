@@ -20,6 +20,9 @@ setup(name='clusterfutures',
           'cloudpickle',
       ],
       python_requires='>=3.5',
+      extras_require={
+          'test': ['pytest', 'testpath>=0.5']
+      },
 
       classifiers=[
           'Intended Audience :: Developers',
