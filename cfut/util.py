@@ -14,14 +14,9 @@ def call(command, stdin=None):
     data sent to the standard input. Returns the standard output data,
     the standard error, and the return code.
     """
-    if stdin is not None:
-        stdin_flag = subprocess.PIPE
-    else:
-        stdin_flag = None
-    proc = subprocess.Popen(command, shell=True, stdin=stdin_flag,
-                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stdout, stderr = proc.communicate(stdin)
-    return stdout, stderr, proc.returncode
+    res = subprocess.run(command, shell=True, input=stdin,
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    return res.stdout, res.stderr, res.returncode
 
 class CommandError(Exception):
     """Raised when a shell command exits abnormally."""
