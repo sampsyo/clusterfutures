@@ -113,8 +113,12 @@ class ClusterExecutor(futures.Executor):
 
         self._cleanup(jobid)
 
-    def submit(self, fun, *args, additional_setup_lines=(), **kwargs):
-        """Submit a job to the pool."""
+    def submit(self, fun, *args, additional_setup_lines=None, **kwargs):
+        """Submit a job to the pool.
+
+        If additional_setup_lines is passed, it overrides the lines given
+        when creating the executor.
+        """
         fut = futures.Future()
 
         # Start the job.
@@ -145,10 +149,23 @@ class ClusterExecutor(futures.Executor):
         self.wait_thread.join()
 
 class SlurmExecutor(ClusterExecutor):
-    """Futures executor for executing jobs on a Slurm cluster."""
+    """Futures executor for executing jobs on a Slurm cluster.
+
+    additional_setup_lines is a list of lines to include in the shell script
+    passed to sbatch. They may include sbatch options (starting with
+    '#SBATCH') and shell commands, e.g. to set environment variables.
+    """
+    def __init__(self, debug=False, keep_logs=False, additional_setup_lines=()):
+        super().__init__(debug, keep_logs)
+        self.additional_setup_lines = additional_setup_lines
+
     def _start(self, workerid, additional_setup_lines):
+        if additional_setup_lines is None:
+            additional_setup_lines = self.additional_setup_lines
         return slurm.submit(
-            '{} -m cfut.remote {}'.format(sys.executable, workerid), additional_setup_lines=additional_setup_lines)
+            '{} -m cfut.remote {}'.format(sys.executable, workerid),
+            additional_setup_lines=additional_setup_lines
+        )
 
     def _cleanup(self, jobid):
         if self.keep_logs:
