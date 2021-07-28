@@ -1,50 +1,15 @@
 """Abstracts access to a Condor cluster via its command-line tools.
 """
-import subprocess
 import re
 import os
 import threading
 import time
-from .util import local_filename
+from .util import call, chcall, local_filename
 
 LOG_FILE = local_filename("condorpy.log")
 OUTFILE_FMT = local_filename("condorpy.stdout.%s.log")
 ERRFILE_FMT = local_filename("condorpy.stderr.%s.log")
 
-def call(command, stdin=None):
-    """Invokes a shell command as a subprocess, optionally with some
-    data sent to the standard input. Returns the standard output data,
-    the standard error, and the return code.
-    """
-    if stdin is not None:
-        stdin_flag = subprocess.PIPE
-    else:
-        stdin_flag = None
-    proc = subprocess.Popen(command, shell=True, stdin=stdin_flag,
-                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stdout, stderr = proc.communicate(stdin)
-    return stdout, stderr, proc.returncode
-
-class CommandError(Exception):
-    """Raised when a shell command exits abnormally."""
-    def __init__(self, command, code, stderr):
-        self.command = command
-        self.code = code
-        self.stderr = stderr
-
-    def __str__(self):
-        return "%s exited with status %i: %s" % (repr(self.command),
-                                                 self.code,
-                                                 repr(self.stderr))
-
-def chcall(command, stdin=None):
-    """Like ``call`` but raises an exception when the return code is
-    nonzero. Only returns the stdout and stderr data.
-    """
-    stdout, stderr, code = call(command, stdin)
-    if code != 0:
-        raise CommandError(command, code, stderr)
-    return stdout, stderr
 
 def submit_text(job):
     """Submits a Condor job represented as a job file string. Returns

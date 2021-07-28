@@ -1,9 +1,6 @@
 """Abstracts access to a Slurm cluster via its command-line tools.
 """
-import re
 import os
-import threading
-import time
 from .util import chcall, random_string, local_filename
 
 LOG_FILE = local_filename("slurmpy.log")

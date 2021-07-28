@@ -77,14 +77,14 @@ class ClusterExecutor(futures.Executor):
         self.wait_thread = FileWaitThread(self._completion)
         self.wait_thread.start()
 
-    def _start(workerid):
+    def _start(self, workerid, additional_setup_lines):
         """Start a job with the given worker ID and return an ID
         identifying the new job. The job should run ``python -m
         cfut.remote <workerid>.
         """
         raise NotImplementedError()
 
-    def _cleanup(jobid):
+    def _cleanup(self, jobid):
         """Given a job ID as returned by _start, perform any necessary
         cleanup after the job has finished.
         """
@@ -113,7 +113,7 @@ class ClusterExecutor(futures.Executor):
 
         self._cleanup(jobid)
 
-    def submit(self, fun, *args, additional_setup_lines=[], **kwargs):
+    def submit(self, fun, *args, additional_setup_lines=(), **kwargs):
         """Submit a job to the pool."""
         fut = futures.Future()
 
