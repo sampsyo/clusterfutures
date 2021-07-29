@@ -6,7 +6,7 @@ def _read(fn):
     return open(path).read()
 
 setup(name='clusterfutures',
-      version='0.3',
+      version='0.4',
       description='futures for remote execution on clusters',
       author='Adrian Sampson',
       author_email='asampson@cs.washington.edu',

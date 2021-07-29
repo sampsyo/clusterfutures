@@ -10,6 +10,8 @@ from .remote import INFILE_FMT, OUTFILE_FMT
 from .util import random_string, local_filename
 import cloudpickle
 
+__version__ = '0.4'
+
 LOGFILE_FMT = local_filename('cfut.log.%s.txt')
 
 class RemoteException(Exception):
