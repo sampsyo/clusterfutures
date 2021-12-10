@@ -6,8 +6,9 @@ import threading
 import time
 from . import condor
 from . import slurm
-from .remote import INFILE_FMT, OUTFILE_FMT
-from .util import random_string, local_filename
+from .util import (
+    random_string, local_filename, INFILE_FMT, OUTFILE_FMT,
+)
 import cloudpickle
 
 __version__ = '0.4'
