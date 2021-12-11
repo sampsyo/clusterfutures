@@ -3,10 +3,7 @@ import cloudpickle
 import sys
 import os
 import traceback
-from .util import local_filename
-
-INFILE_FMT = local_filename('cfut.in.%s.pickle')
-OUTFILE_FMT = local_filename('cfut.out.%s.pickle')
+from .util import INFILE_FMT, OUTFILE_FMT
 
 def format_remote_exc():
     typ, value, tb = sys.exc_info()
