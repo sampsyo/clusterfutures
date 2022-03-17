@@ -1,7 +1,8 @@
-import subprocess
-import random
-import string
 import os
+import random
+import shlex
+import string
+import subprocess
 
 def local_filename(filename=""):
     return os.path.join(os.getenv("CFUT_DIR", ".cfut"), filename)
@@ -41,3 +42,9 @@ def chcall(command, stdin=None):
     if code != 0:
         raise CommandError(command, code, stderr)
     return stdout, stderr
+
+
+# This is part of the shlex module from Python 3.8. This is copied from 3.10:
+def shlex_join(split_command):
+    """Return a shell-escaped string from *split_command*."""
+    return ' '.join(shlex.quote(arg) for arg in split_command)
