@@ -1,6 +1,7 @@
 """Abstracts access to a Slurm cluster via its command-line tools.
 """
 import os
+import shlex
 from .util import chcall, random_string, local_filename
 
 LOG_FILE = local_filename("slurmpy.log")
@@ -24,6 +25,6 @@ def submit(cmdline, outpat=OUTFILE_FMT.format('%j'), additional_setup_lines=[]):
         "#!/bin/sh",
         "#SBATCH --output={}".format(outpat),
         *additional_setup_lines,
-        "srun {}".format(cmdline),
+        shlex.join(['srun', *cmdline]),
     ]
     return submit_text('\n'.join(script_lines))
