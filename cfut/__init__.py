@@ -32,7 +32,7 @@ class FileWaitThread(threading.Thread):
         associated with the filename of each file that is created.
         ``interval`` specifies the polling rate.
         """
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self, daemon=True)
         self.callback = callback
         self.interval = interval
         self.waiting = {}
