@@ -1,6 +1,7 @@
 """Python futures for Condor clusters."""
 from concurrent import futures
 import os
+import shlex
 import sys
 import threading
 import time
@@ -158,15 +159,21 @@ class SlurmExecutor(ClusterExecutor):
     passed to sbatch. They may include sbatch options (starting with
     '#SBATCH') and shell commands, e.g. to set environment variables.
     """
-    def __init__(self, debug=False, keep_logs=False, additional_setup_lines=()):
+    def __init__(self, debug=False, keep_logs=False, additional_setup_lines=(),
+                 additional_import_paths=()):
         super().__init__(debug, keep_logs)
         self.additional_setup_lines = additional_setup_lines
+        self.additional_import_paths = additional_import_paths
 
     def _start(self, workerid, additional_setup_lines):
         if additional_setup_lines is None:
             additional_setup_lines = self.additional_setup_lines
+        if self.additional_import_paths:
+            extra_path = ":".join(self.additional_import_paths)
+        else:
+            extra_path = "!"  # ! for nothing, because '' is valid (CWD)
         return slurm.submit(
-            '{} -m cfut.remote {}'.format(sys.executable, workerid),
+            [sys.executable, '-m', 'cfut.remote', workerid, extra_path],
             additional_setup_lines=additional_setup_lines
         )
 

@@ -10,9 +10,16 @@ def format_remote_exc():
     tb = tb.tb_next  # Remove root call to worker().
     return ''.join(traceback.format_exception(typ, value, tb))
 
-def worker(workerid):
+def worker(workerid, extra_import_paths="!"):
     """Called to execute a job on a remote host."""
     print("worker")
+    if extra_import_paths != '!':
+        extra_import_paths = extra_import_paths.split(':')
+        print("Prepending %d paths to sys.path:" % len(extra_import_paths))
+        for p in extra_import_paths:
+            print(" ", p)
+        sys.path[:0] = extra_import_paths
+
     try:
         with open(INFILE_FMT % workerid, 'rb') as f:
             indata = f.read()
