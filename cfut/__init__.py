@@ -5,6 +5,8 @@ import os
 import sys
 import threading
 import time
+import traceback
+
 from . import condor
 from . import slurm
 from .util import (
@@ -173,7 +175,13 @@ class SlurmWaitThread(FileWaitThread):
     def check(self, i):
         super().check(i)
         if i % (self.slurm_poll_interval // self.interval) == 0:
-            finished_jobs = slurm.jobs_finished(self.waiting.values())
+            try:
+                finished_jobs = slurm.jobs_finished(self.waiting.values())
+            except Exception:
+                # Don't abandon completion checking if jobs_finished errors
+                traceback.print_exc()
+                return
+
             if not finished_jobs:
                 return
 
