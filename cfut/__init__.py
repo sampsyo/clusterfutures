@@ -45,8 +45,7 @@ class FileWaitThread(threading.Thread):
 
     def stop(self):
         """Stop the thread soon."""
-        with self.lock:
-            self.shutdown = True
+        self.shutdown = True
 
     def wait(self, filename, value):
         """Adds a new filename (and its associated callback value) to
@@ -57,14 +56,14 @@ class FileWaitThread(threading.Thread):
 
     def run(self):
         for i in count():
+            if self.shutdown:
+                return
+
             self.check(i)
             time.sleep(self.interval)
 
     def check(self, i):
         with self.lock:
-            if self.shutdown:
-                return
-
             # Poll for each file.
             for filename in list(self.waiting):
                 if os.path.exists(filename):
