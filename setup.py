@@ -19,7 +19,7 @@ setup(name='clusterfutures',
       install_requires=[
           'cloudpickle',
       ],
-      python_requires='>=3.5',
+      python_requires='>=3.6',
       extras_require={
           'test': ['pytest', 'testpath>=0.5']
       },
