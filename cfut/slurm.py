@@ -36,8 +36,8 @@ STATES_FINISHED = {  # https://slurm.schedmd.com/squeue.html#lbAG
 
 def jobs_finished(job_ids):
     res = run([
-        'squeue', '--noheader', '--format=%i %T', '--jobs', ','.join(job_ids),
-        '--states=all',
+        'squeue', '--noheader', '--format=%i %T',
+        '--jobs', ','.join([str(j) for j in job_ids]), '--states=all',
     ], stdout=PIPE, stderr=PIPE, encoding='utf-8', check=True)
     id_to_state = dict([
         l.strip().partition(' ')[::2] for l in res.stdout.splitlines()
