@@ -1,7 +1,7 @@
 """Python futures for Condor clusters."""
 from concurrent import futures
+from itertools import count
 import os
-import shlex
 import sys
 import threading
 import time
@@ -22,6 +22,10 @@ class RemoteException(Exception):
 
     def __str__(self):
         return '\n' + self.error.strip()
+
+class JobDied(Exception):
+    pass
+
 
 class FileWaitThread(threading.Thread):
     """A thread that polls the filesystem waiting for a list of files to
@@ -52,22 +56,27 @@ class FileWaitThread(threading.Thread):
             self.waiting[filename] = value
 
     def run(self):
-        while True:
-            with self.lock:
-                if self.shutdown:
-                    return
-
-                # Poll for each file.
-                for filename in list(self.waiting):
-                    if os.path.exists(filename):
-                        self.callback(self.waiting[filename])
-                        del self.waiting[filename]
-
+        for i in count():
+            self.check(i)
             time.sleep(self.interval)
+
+    def check(self, i):
+        with self.lock:
+            if self.shutdown:
+                return
+
+            # Poll for each file.
+            for filename in list(self.waiting):
+                if os.path.exists(filename):
+                    self.callback(self.waiting[filename])
+                    del self.waiting[filename]
+
 
 class ClusterExecutor(futures.Executor):
     """An abstract base class for executors that run jobs on clusters.
     """
+    wait_thread_cls = FileWaitThread
+
     def __init__(self, debug=False, keep_logs=False):
         os.makedirs(local_filename(), exist_ok=True)
         self.debug = debug
@@ -78,7 +87,7 @@ class ClusterExecutor(futures.Executor):
         self.jobs_empty_cond = threading.Condition(self.jobs_lock)
         self.keep_logs = keep_logs
 
-        self.wait_thread = FileWaitThread(self._completion)
+        self.wait_thread = self.wait_thread_cls(self._completion)
         self.wait_thread.start()
 
     def _start(self, workerid, additional_setup_lines):
@@ -102,18 +111,25 @@ class ClusterExecutor(futures.Executor):
         if self.debug:
             print("job completed: %i" % jobid, file=sys.stderr)
 
-        with open(OUTFILE_FMT % workerid, 'rb') as f:
-            outdata = f.read()
-        success, result = cloudpickle.loads(outdata)
-
-        if success:
-            fut.set_result(result)
+        try:
+            with open(OUTFILE_FMT % workerid, 'rb') as f:
+                outdata = f.read()
+        except FileNotFoundError:
+            fut.set_exception(
+                JobDied(f"Cluster job {jobid} finished without writing a result")
+            )
         else:
-            fut.set_exception(RemoteException(result))
+            success, result = cloudpickle.loads(outdata)
+
+            if success:
+                fut.set_result(result)
+            else:
+                fut.set_exception(RemoteException(result))
+
+            os.unlink(OUTFILE_FMT % workerid)
 
         # Clean up communication files.
         os.unlink(INFILE_FMT % workerid)
-        os.unlink(OUTFILE_FMT % workerid)
 
         self._cleanup(jobid)
 
@@ -152,6 +168,22 @@ class ClusterExecutor(futures.Executor):
         self.wait_thread.stop()
         self.wait_thread.join()
 
+class SlurmWaitThread(FileWaitThread):
+    slurm_poll_interval = 30
+
+    def check(self, i):
+        super().check(i)
+        if i % (self.slurm_poll_interval // self.interval) == 0:
+            finished_jobs = slurm.jobs_finished(self.waiting.values())
+            if not finished_jobs:
+                return
+
+            id_to_filename = {v: k for (k, v) in self.waiting.items()}
+            for finished_id in finished_jobs:
+                self.callback(finished_id)
+                self.waiting.pop(id_to_filename[finished_id])
+
+
 class SlurmExecutor(ClusterExecutor):
     """Futures executor for executing jobs on a Slurm cluster.
 
@@ -159,6 +191,8 @@ class SlurmExecutor(ClusterExecutor):
     passed to sbatch. They may include sbatch options (starting with
     '#SBATCH') and shell commands, e.g. to set environment variables.
     """
+    wait_thread_cls = SlurmWaitThread
+
     def __init__(self, debug=False, keep_logs=False, additional_setup_lines=(),
                  additional_import_paths=()):
         super().__init__(debug, keep_logs)
