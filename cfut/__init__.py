@@ -42,7 +42,7 @@ class FileWaitThread(threading.Thread):
         self.callback = callback
         self.interval = interval
         self.waiting = {}
-        self.lock = threading.Lock()
+        self.lock = threading.Lock()  # To protect the .waiting dict
         self.shutdown = False
 
     def stop(self):
@@ -61,16 +61,16 @@ class FileWaitThread(threading.Thread):
             if self.shutdown:
                 return
 
-            self.check(i)
+            with self.lock:
+                self.check(i)
             time.sleep(self.interval)
 
     def check(self, i):
-        with self.lock:
-            # Poll for each file.
-            for filename in list(self.waiting):
-                if os.path.exists(filename):
-                    self.callback(self.waiting[filename])
-                    del self.waiting[filename]
+        # Poll for each file.
+        for filename in list(self.waiting):
+            if os.path.exists(filename):
+                self.callback(self.waiting[filename])
+                del self.waiting[filename]
 
 
 class ClusterExecutor(futures.Executor):
