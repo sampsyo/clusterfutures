@@ -66,6 +66,11 @@ class FileWaitThread(threading.Thread):
             time.sleep(self.interval)
 
     def check(self, i):
+        """Do one check for completed jobs
+
+        The i parameter allows subclasses like SlurmWaitThread to do something
+        on every Nth check.
+        """
         # Poll for each file.
         for filename in list(self.waiting):
             if os.path.exists(filename):
