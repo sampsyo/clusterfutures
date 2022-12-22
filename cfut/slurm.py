@@ -35,6 +35,13 @@ STATES_FINISHED = {  # https://slurm.schedmd.com/squeue.html#lbAG
 }
 
 def jobs_finished(job_ids):
+    """Check which ones of the given Slurm jobs already finished
+    """
+
+    # If there is no Slurm job to check, return right away
+    if not job_ids:
+        return set()
+
     res = run([
         'squeue', '--noheader', '--format=%i %T',
         '--jobs', ','.join([str(j) for j in job_ids]), '--states=all',
