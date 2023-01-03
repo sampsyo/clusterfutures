@@ -7,6 +7,11 @@ def square(n):
     return n * n
 def hostinfo():
     return subprocess.check_output('uname -a', shell=True)
+def just_raise():
+    raise RuntimeError("error")
+def just_exit():
+    import sys
+    sys.exit()
 
 def example_1():
     """Square some numbers on remote hosts!
@@ -32,7 +37,25 @@ def example_3():
     exc = cfut.SlurmExecutor(False)
     print(list(cfut.map(exc, square, [5, 7, 11])))
 
+def example_4():
+    """Demonstrate the behavior in case of an error
+    """
+    with cfut.SlurmExecutor(True, keep_logs=True) as executor:
+        future = executor.submit(just_raise)
+        res = future.result()
+
+def example_5():
+    """
+    Demonstrate the behavior in case of unexpected exit
+    """
+    with cfut.SlurmExecutor(True, keep_logs=True) as executor:
+        future = executor.submit(just_exit)
+        res = future.result()
+
+
 if __name__ == '__main__':
     example_1()
     example_2()
     example_3()
+    # example_4()  # warning: this raises an exception
+    # example_5()  # warning: this takes ~30 seconds
