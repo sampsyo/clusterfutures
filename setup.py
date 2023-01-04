@@ -6,7 +6,7 @@ def _read(fn):
     return open(path).read()
 
 setup(name='clusterfutures',
-      version='0.4',
+      version='0.5',
       description='futures for remote execution on clusters',
       author='Adrian Sampson',
       author_email='asampson@cs.washington.edu',
@@ -19,7 +19,7 @@ setup(name='clusterfutures',
       install_requires=[
           'cloudpickle',
       ],
-      python_requires='>=3.6',
+      python_requires='>=3.7',
       extras_require={
           'test': ['pytest', 'testpath>=0.5']
       },

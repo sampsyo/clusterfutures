@@ -14,7 +14,7 @@ from .util import (
 )
 import cloudpickle
 
-__version__ = '0.4'
+__version__ = '0.5'
 
 LOGFILE_FMT = local_filename('cfut.log.%s.txt')
 
