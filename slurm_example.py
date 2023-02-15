@@ -52,6 +52,14 @@ def example_5():
         future = executor.submit(just_exit)
         res = future.result()
 
+def example_6():
+    """
+    Demonstrate the behavior in case of an error within a map
+    """
+    with cfut.SlurmExecutor(True, keep_logs=True) as executor:
+        results_generator = executor.map(just_raise, [0, 1, 2])
+        for result in results_generator:
+            print(result)
 
 if __name__ == '__main__':
     example_1()
@@ -59,3 +67,4 @@ if __name__ == '__main__':
     example_3()
     # example_4()  # warning: this raises an exception
     # example_5()  # warning: this takes ~30 seconds
+    # example_6()  # warning: this raises an exception
