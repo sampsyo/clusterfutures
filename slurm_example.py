@@ -12,6 +12,8 @@ def just_raise():
 def just_exit():
     import sys
     sys.exit()
+def just_raise_in_map(n):
+    raise RuntimeError("error for n=%i" % n)
 
 def example_1():
     """Square some numbers on remote hosts!
@@ -57,7 +59,7 @@ def example_6():
     Demonstrate the behavior in case of an error within a map
     """
     with cfut.SlurmExecutor(True, keep_logs=True) as executor:
-        results_generator = executor.map(just_raise, [0, 1, 2])
+        results_generator = executor.map(just_raise_in_map, [0, 1, 2])
         for result in results_generator:
             print(result)
 
