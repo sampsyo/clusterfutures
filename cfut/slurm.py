@@ -16,7 +16,7 @@ def submit_text(job):
         f.write(job)
     jobid, _ = chcall('sbatch --parsable {}'.format(filename))
     os.unlink(filename)
-    return int(jobid)
+    return int(jobid.split(b";")[0])
 
 def submit(cmdline, outpat=OUTFILE_FMT.format('%j'), additional_setup_lines=[]):
     """Starts a Slurm job that runs the specified shell command line.
