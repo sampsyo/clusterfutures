@@ -108,6 +108,11 @@ class ClusterExecutor(futures.Executor):
         cleanup after the job has finished.
         """
 
+    def _print_cancelled_future_message(self, jobid):
+        """Print error message when future was cancelled"""
+        if self.debug:
+            print("The future of job %i was cancelled, skip it" % jobid)
+
     def _completion(self, jobid):
         """Called whenever a job finishes."""
         with self.jobs_lock:
@@ -121,16 +126,28 @@ class ClusterExecutor(futures.Executor):
             with open(OUTFILE_FMT % workerid, 'rb') as f:
                 outdata = f.read()
         except FileNotFoundError:
-            fut.set_exception(
-                JobDied(f"Cluster job {jobid} finished without writing a result")
-            )
+            try:
+                fut.set_exception(
+                    JobDied(f"Cluster job {jobid} finished without writing a result")
+                )
+            except futures.InvalidStateError:
+                self._print_cancelled_future_message(jobid)
+                return
         else:
             success, result = cloudpickle.loads(outdata)
 
             if success:
-                fut.set_result(result)
+                try:
+                    fut.set_result(result)
+                except futures.InvalidStateError:
+                    self._print_cancelled_future_message(jobid)
+                    return
             else:
-                fut.set_exception(RemoteException(result))
+                try:
+                    fut.set_exception(RemoteException(result))
+                except futures.InvalidStateError:
+                    self._print_cancelled_future_message(jobid)
+                    return
 
             os.unlink(OUTFILE_FMT % workerid)
 
